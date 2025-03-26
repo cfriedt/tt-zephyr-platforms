@@ -1,0 +1,67 @@
+# Copyright 2025 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Synopsys DesignWare PCIe endpoint interface
+
+  Note: please keep compatible / synchronized with corresponding Linux snps,dw-pcie* bindings.
+
+compatible: "snps,dw-pcie-ep"
+
+include: [base.yaml]
+
+properties:
+  reg:
+    required: true
+    description: |
+      DBI, DBI2, ATU, DMA, PHY and other reg-spaces required for endpoint controller
+      functionality.
+
+  reg-names:
+    required: true
+    enum: ["dbi", "dbi2", "atu", "dma", "phy", "addr_space"]
+    description: |
+      Names of reg-spaces required for endpoint controller functionality.
+
+      Names can be one of the following:
+        - dbi: Basic PCIe controller configuration space accessible over the DBI interface.
+        - dbi2: Shadow PCIe config-space registers which contain configuration space, header
+          space, standard, and extended structures.
+        - elbi: External local bus registers. Synonymous with "app" and platform-specific.
+        - app: Application-specific registers. Synonymous with "elbi" and platform-specific.
+        - atu: Unrolled memory space containing internal address translation unit (iATU) and
+          enhanced DMA registers.
+        - dma: Platform-specific eDMA registers.
+        - phy: PHY / PCS configuration registers.
+        - addr_space: Outbound iATU-capable memory region for generating application-specific PCIe
+          traffic such as MSI or MSI-X messages.
+
+      Mandatory names include:
+        - dbi
+        - addr_space
+
+  interrupt-names:
+    enum: ["vpd", "l_eq", "dma0", "dma1", "dma2", "dma3", "sft_ce", "sft_ue", "tx_inta",
+      "tx_intb", "tx_intc", "tx_intd", "legacy"]
+    description: |
+      Interrupt names corresponding to values in the "interrupts" property.
+
+      Names can be one of the following:
+        - vpd: Controller request to read or write virtual product data capability registers.
+        - l_eq: Link equalization request flag is set.
+        - dma[0-3]: Enhanced DMA transmit or receive operation is complete, or an error has
+          occured. More dma registers may be added in the future if needed.
+        - sft_ce: Correctable error detected by the safety feature.
+        - sft_ue: Uncorrectable error detected by the safety feature.
+        - app: Application or platform-specific IRQ has been raised.
+        - tx_int[a-d]: Triggered when the device has sent an Assert or Deassert message to the
+          upstream device.
+        - legacy: Combined interrupt signal raised when the IRQ has sent an Assert message.
+
+        No interrupts are required, but if specified, they must be named and the "interrupt-names"
+        property must have the same number of elements as the "interrupts" property.
+  
+  max-functions:
+    type: int
+    descriptions: |
+      Maximum number of PCIe functions provided by the endpoint.
