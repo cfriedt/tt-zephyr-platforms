@@ -1,0 +1,11 @@
+# Copyright 2025 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig PCIE_EP_DW
+	bool "Synopsys Designware PCIe EP driver"
+	help
+	  This option enables Synopsys Designware PCIe EP driver.
+
+if PCIE_EP_DW
+
+endif # PCIE_EP_IPROC

@@ -1,0 +1,12 @@
+# Copyright 2025 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
+
+if PCIE_ENDPOINT
+
+menu "PCIe Endpoint Drivers"
+
+rsource "Kconfig.dw"
+
+endmenu
+
+endif
