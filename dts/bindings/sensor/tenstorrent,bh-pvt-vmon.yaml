@@ -1,0 +1,38 @@
+# Copyright (c) 2025 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+    Tenstorrent Blackhole PVT voltage monitor
+
+    PVT stands for process, voltage, and temperature. These bindings are used specifically to
+    describe the associated voltage monitor nodes of the multi-function PVT device.
+    
+    bh_pvt0: bh_pvt@0x80080000 {
+      compatible = "tenstorrent,bh-pvt";
+      reg = <0x80080000 0x40>, <0x80080040 0x40>, <0x80080800 0x200>;
+      reg-names = "pvt", "irq", "vm_cmn";
+      interrupts = <56 1>;
+      interrupt-parent = <&intc>;
+
+      #size-cells = <0>;
+
+      bh_pvt_vmon0: bh_pvt_vmon@0 {
+        compatible = "tenstorrent,bh-pvt-vmon";
+        reg = <0>;
+      };
+
+      bh_pvt_vmon1: bh_pvt_vmon@1 {
+        compatible = "tenstorrent,bh-pvt-vmon";
+        reg = <1>;
+      };
+    };
+
+compatible: "tenstorrent,bh-pvt-vmon"
+
+include: [sensor-device.yaml]
+
+properties:
+  reg:
+    required: true
+    description: |
+      Instance number of sensor.

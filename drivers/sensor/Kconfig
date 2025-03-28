@@ -6,6 +6,7 @@ if SENSOR
 menu "Sensor Drivers"
 
 # zephyr-keep-sorted-start
+rsource "tenstorrent/Kconfig"
 rsource "ti/Kconfig"
 # zephyr-keep-sorted-stop
 
