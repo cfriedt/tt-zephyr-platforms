@@ -1,0 +1,8 @@
+#  Copyright (c) 2025 Tenstorrent AI ULC
+#  SPDX-License-Identifier: Apache-2.0
+
+config MFD_TT_BH_PVT
+    bool "Support for Tenstorrent Blackhole process, voltage, and temperature MFD devices"
+    default y if DT_HAS_TENSTORRENT_BH_PVT_ENABLED
+    help
+      This option enables support for the Tenstorrent Blackhole PVT MFD driver.

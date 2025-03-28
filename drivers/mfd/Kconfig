@@ -3,10 +3,11 @@
 
 if MFD
 
-menu "MFD Drivers"
+menu "Multi-function device (MFD) drivers"
 
 # zephyr-keep-sorted-start
 rsource "Kconfig.max6639"
+rsource "Kconfig.tt_bh_pvt"
 # zephyr-keep-sorted-stop
 
 endmenu
