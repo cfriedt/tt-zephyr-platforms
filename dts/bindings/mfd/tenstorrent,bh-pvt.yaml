@@ -1,0 +1,59 @@
+# Copyright (c) 2025 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+    Tenstorrent Blackhole PVT sensor
+
+    PVT stands for process, voltage, and temperature. These bindings are used specifically to
+    describe common parts of the top-level multi-function device and to provide a parent reference to
+    sub-devices.
+
+    E.g.
+    bh_pvt0: bh_pvt@0x80080000 {
+      compatible = "tenstorrent,bh-pvt";
+      reg = <0x80080000 0x40>, <0x80080040 0x40>, <0x80080080 0x40>;
+      reg-names = "pvt", "irq", "ts_cmn";
+      interrupts = <56 1>;
+      interrupt-parent = <&intc>;
+
+      ... <sub-device nodes> ...
+    };
+
+compatible: "tenstorrent,bh-pvt"
+
+include: base.yaml
+
+properties:
+  reg:
+    required: true
+    description: |
+      Address ranges of device registers.
+      
+      The first register range is mandator and corresponds to the "pvt" named register range.
+
+      If process detectors are enabled, the "pd_cmn" named register range must be present. The base
+      address for each process detector node is derived from the pd_cmn reg address and reg size
+      fields, as well as instance number of the child process detector node.
+
+      If voltage monitors are enabled, the "vm_cmn" named register range must be present. The base
+      address for each voltage monitor node is derived from the vm_cmn reg address and reg size
+      fields, as well as instance number of the child voltage monitor node.
+
+      If temperature sensors are enabled, the "ts_cmn" named register range must be present. The base
+      address for each temperature sensor node is derived from the vm_cmn reg address and reg size
+      fields, as well as instance number of the child voltage monitor node.
+
+      If interrupt support is enabled (i.e. the "interrupts" field is present), the "irq" named
+      register range must be present.
+
+  reg-names:
+    required: true
+    enum: ["irq", "pd_cmn", "pvt", "ts_cmn", "vm_cmn"]
+    description: |
+      The names of register ranges corresponding to those declared in the reg property.
+
+      - "irq" is the named register range for interrupt registers.
+      - "pd_cmn" is the named register range for common process detector registers.
+      - "pvt" is the named register range for common PVT device registers.
+      - "ts_cmn" is the named register range for common temperature sensor registers.
+      - "vm_cmn" is the named register range for common voltage monitor registers.
