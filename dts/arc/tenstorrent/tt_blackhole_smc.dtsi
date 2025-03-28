@@ -309,6 +309,114 @@
 		interrupt-parent = <&idu_intc>;
 		ranges;
 
+		bh_pvt0: bh_pvt@80080000 {
+			compatible = "tenstorrent,bh-pvt";
+			reg = <0x80080000 0x40>, <0x80080040 0x40>, <0x80080080 0x40>, <0x80080800 0x200>;
+			reg-names = "pvt", "irq", "ts_cmn", "vm_cmn";
+			interrupts = <56 1>;
+			interrupt-parent = <&intc>;
+			status = "disabled";
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			bh_pvt_temp0: temp@0 {
+				compatible = "tenstorrent,bh-pvt-temp";
+				reg = <0>;
+				status = "disabled";
+			};
+
+			bh_pvt_temp1: temp@1 {
+				compatible = "tenstorrent,bh-pvt-temp";
+				reg = <1>;
+				status = "disabled";
+			};
+
+			bh_pvt_temp2: temp@2 {
+				compatible = "tenstorrent,bh-pvt-temp";
+				reg = <2>;
+				status = "disabled";
+			};
+
+			bh_pvt_temp3: temp@3 {
+				compatible = "tenstorrent,bh-pvt-temp";
+				reg = <3>;
+				status = "disabled";
+			};
+
+			bh_pvt_temp4: temp@4 {
+				compatible = "tenstorrent,bh-pvt-temp";
+				reg = <4>;
+				status = "disabled";
+			};
+
+			bh_pvt_temp5: temp@5 {
+				compatible = "tenstorrent,bh-pvt-temp";
+				reg = <5>;
+				status = "disabled";
+			};
+
+			bh_pvt_temp6: temp@6 {
+				compatible = "tenstorrent,bh-pvt-temp";
+				reg = <6>;
+				status = "disabled";
+			};
+
+			bh_pvt_temp7: temp@7 {
+				compatible = "tenstorrent,bh-pvt-temp";
+				reg = <7>;
+				status = "disabled";
+			};
+
+			bh_pvt_vmon0: vmon@0 {
+				compatible = "tenstorrent,bh-pvt-vmon";
+				reg = <0>;
+				status = "disabled";
+			};
+
+			bh_pvt_vmon1: vmon@1 {
+				compatible = "tenstorrent,bh-pvt-vmon";
+				reg = <1>;
+				status = "disabled";
+			};
+
+			bh_pvt_vmon2: vmon@2 {
+				compatible = "tenstorrent,bh-pvt-vmon";
+				reg = <2>;
+				status = "disabled";
+			};
+
+			bh_pvt_vmon3: vmon@3 {
+				compatible = "tenstorrent,bh-pvt-vmon";
+				reg = <3>;
+				status = "disabled";
+			};
+
+			bh_pvt_vmon4: vmon@4 {
+				compatible = "tenstorrent,bh-pvt-vmon";
+				reg = <4>;
+				status = "disabled";
+			};
+
+			bh_pvt_vmon5: vmon@5 {
+				compatible = "tenstorrent,bh-pvt-vmon";
+				reg = <5>;
+				status = "disabled";
+			};
+
+			bh_pvt_vmon6: vmon@6 {
+				compatible = "tenstorrent,bh-pvt-vmon";
+				reg = <6>;
+				status = "disabled";
+			};
+
+			bh_pvt_vmon7: vmon@7 {
+				compatible = "tenstorrent,bh-pvt-vmon";
+				reg = <7>;
+				status = "disabled";
+			};
+		};
+
 		global_reset: reset@80030000 {
 			compatible = "tenstorrent,bh-reset";
 			reg = <0x80030000 0x4>;

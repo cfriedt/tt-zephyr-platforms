@@ -22,3 +22,71 @@
 &wdt0 {
 	status = "okay";
 };
+
+&bh_pvt0 {
+	status = "okay";
+};
+
+&bh_pvt_temp0 {
+	status = "okay";
+};
+
+&bh_pvt_temp1 {
+	status = "okay";
+};
+
+&bh_pvt_temp2 {
+	status = "okay";
+};
+
+&bh_pvt_temp3 {
+	status = "okay";
+};
+
+&bh_pvt_temp4 {
+	status = "okay";
+};
+
+&bh_pvt_temp5 {
+	status = "okay";
+};
+
+&bh_pvt_temp6 {
+	status = "okay";
+};
+
+&bh_pvt_temp7 {
+	status = "okay";
+};
+
+&bh_pvt_vmon0 {
+	status = "okay";
+};
+
+&bh_pvt_vmon1 {
+	status = "okay";
+};
+
+&bh_pvt_vmon2 {
+	status = "okay";
+};
+
+&bh_pvt_vmon3 {
+	status = "okay";
+};
+
+&bh_pvt_vmon4 {
+	status = "okay";
+};
+
+&bh_pvt_vmon5 {
+	status = "okay";
+};
+
+&bh_pvt_vmon6 {
+	status = "okay";
+};
+
+&bh_pvt_vmon7 {
+	status = "okay";
+};

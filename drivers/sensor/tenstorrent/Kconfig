@@ -1,0 +1,7 @@
+# Copyright (c) 2025 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
+
+# zephyr-keep-sorted-start
+rsource "bh_pvt_vmon/Kconfig"
+rsource "bh_pvt_temp/Kconfig"
+# zephyr-keep-sorted-stop

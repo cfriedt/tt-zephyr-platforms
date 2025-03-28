@@ -1,0 +1,45 @@
+# Copyright (c) 2025 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+    Tenstorrent Blackhole PVT temperature sensor
+
+    PVT stands for process, voltage, and temperature. These bindings are used specifically to
+    describe the associated temerature sensor nodes of the multi-function PVT device.
+    
+    E.g.
+    bh_pvt0: bh_pvt@0x80080000 {
+      compatible = "tenstorrent,bh-pvt";
+      reg = <0x80080000 0x40>, <0x80080040 0x40>, <0x80080080 0x40>;
+      reg-names = "pvt", "irq", "ts_cmn";
+      interrupts = <56 1>;
+      interrupt-parent = <&intc>;
+
+      #size-cells = <0>;
+
+      bh_pvt_temp0: bh_pvt_temp@0 {
+        compatible = "tenstorrent,bh-pvt-temp";
+        reg = <0>;
+      };
+
+      bh_pvt_temp1: bh_pvt_temp@1 {
+        compatible = "tenstorrent,bh-pvt-temp";
+        reg = <1>;
+      };
+    };
+
+compatible: "tenstorrent,bh-pvt-temp"
+
+include: [sensor-device.yaml]
+
+properties:
+  reg:
+    required: true
+    description: |
+      Instance number of sensor.
+
+  sample-period-ms:
+    type: int
+    default: 5
+    description: |
+      Temperature sample period in milliseconds.
