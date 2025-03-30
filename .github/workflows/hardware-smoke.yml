@@ -18,6 +18,7 @@ jobs:
   hardware-smoke-test:
     if: github.repository_owner == 'tenstorrent'
     strategy:
+      fail-fast: false
       matrix:
         config:
           - board: p100
@@ -203,6 +204,7 @@ jobs:
   smoke-e2e-test:
     if: github.repository_owner == 'tenstorrent'
     strategy:
+      fail-fast: false
       matrix:
         config:
           - board: p100
