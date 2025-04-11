@@ -15,17 +15,32 @@ on:
       - v*-branch
 
 jobs:
+  matrix-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-runners.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: tt-zephyr-platforms
+      - id: set-runners
+        run: |
+          # print a JSON map of runners to stdout
+          CONFIG="$(./tt-zephyr-platforms/scripts/check-runners.py \
+            -j \
+            -o ${{ github.repository_owner }} \
+            -r ${{ github.event.repository.name }} \
+            -t ${{ GITHUB_TOKEN }} \
+            -y ./tt-zephyr-platforms/.github/runners.yml \
+          )"
+          echo "matrix=${CONFIG}" >> "$GITHUB_OUTPUT"
+
   hardware-smoke-test:
+    needs: matrix-setup
+    runs-on: ${{ matrix.config.label }}
     strategy:
       fail-fast: false
-      matrix:
-        # Temporarily disable P100A tests due to reset issue #101
-        # Note: YAMLLint complains about 'comment not indented like content', so removed instead
-        config:
-          - board: p100
-            runs-on:
-              - yyz-zephyr-lab-p100
-    runs-on: ${{ matrix.config.runs-on }}
+      matrix: ${{fromJson(needs.matrix-setup.outputs.matrix)}}
     container:
       image: ghcr.io/zephyrproject-rtos/ci-repo-cache:v0.27.4.20241026
       volumes:
@@ -35,9 +50,6 @@ jobs:
         - /opt/tenstorrent/bin/openocd-rtt:/opt/tenstorrent/bin/openocd-rtt
       options: '--device /dev/tenstorrent --device /dev/bus/usb --privileged'
     steps:
-      - uses: actions/checkout@v4
-        with:
-          path: tt-zephyr-platforms
       - uses: ./tt-zephyr-platforms/.github/workflows/prepare-zephyr
         with:
           app-path: tt-zephyr-platforms
@@ -126,16 +138,11 @@ jobs:
             zephyr/twister-smc-smoke/twister.json
 
   smoke-e2e-test:
+    needs: matrix-setup
     strategy:
       fail-fast: false
-      matrix:
-        # Temporarily disable P100A tests due to reset issue #101
-        # Note: YAMLLint complains about 'comment not indented like content', so removed instead
-        config:
-          - board: p100
-            runs-on:
-              - yyz-zephyr-lab-p100
-    runs-on: ${{ matrix.config.runs-on }}
+      matrix: ${{fromJson(needs.matrix-setup.outputs.matrix)}}
+    runs-on: ${{ matrix.config.label }}
     env:
       "ZEPHYR_SDK_INSTALL_DIR": /opt/toolchains
     container:

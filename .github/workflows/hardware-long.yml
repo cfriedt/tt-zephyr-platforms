@@ -6,17 +6,32 @@ on:
     - cron: "0 0 * * *"
 
 jobs:
+  matrix-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-runners.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: tt-zephyr-platforms
+      - id: set-runners
+        run: |
+          # print a JSON map of runners to stdout
+          CONFIG="$(./tt-zephyr-platforms/scripts/check-runners.py \
+            -j \
+            -o ${{ github.repository_owner }} \
+            -r ${{ github.event.repository.name }} \
+            -t ${{ GITHUB_TOKEN }} \
+            -y ./tt-zephyr-platforms/.github/runners.yml \
+          )"
+          echo "matrix=${CONFIG}" >> "$GITHUB_OUTPUT"
+
   hardware-metal-test:
+    needs: matrix-setup
+    runs-on: ${{ matrix.config.label }}
     strategy:
       fail-fast: false
-      matrix:
-        # Temporarily disable P100A tests due to reset issue #101
-        # Note: YAMLLint complains about 'comment not indented like content', so removed instead
-        config:
-          - board: p100
-            runs-on:
-              - yyz-zephyr-lab-p100
-    runs-on: ${{ matrix.config.runs-on }}
+      matrix: ${{fromJson(needs.matrix-setup.outputs.matrix)}}
     env:
       "ZEPHYR_SDK_INSTALL_DIR": /opt/toolchains
     container:
