@@ -1,0 +1,62 @@
+name: Check Scripts
+
+on:
+  push:
+    branches:
+      - main
+      - v*-branch
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    branches:
+      - main
+      - v*-branch
+
+jobs:
+  dump_contexts_to_log:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: Dump steps context
+        env:
+          STEPS_CONTEXT: ${{ toJson(steps) }}
+        run: echo "$STEPS_CONTEXT"
+      - name: Dump runner context
+        env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+        run: echo "$RUNNER_CONTEXT"
+      - name: Dump strategy context
+        env:
+          STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+        run: echo "$STRATEGY_CONTEXT"
+      - name: Dump matrix context
+        env:
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+        run: echo "$MATRIX_CONTEXT"
+  check-scripts:
+    runs-on: ubuntu-latest
+    name: Check Scripts
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check scripts/check-runners.py
+        run: |
+          which python3
+          python3 --version
+
+          echo "The following runners are available:"
+          ./scripts/check-runners.py \
+            -d \
+            -o ${{ github.repository_owner }} \
+            -r ${{ github.event.repository.name }} \
+            -t "baaaaaah..." \
+            -y .github/runners.yml
