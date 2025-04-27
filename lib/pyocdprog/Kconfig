@@ -1,0 +1,27 @@
+# Copyright (c) 2025 Tenstorrent AI ULC
+# SPDX-License-Identifier: Apache-2.0
+
+config PYOCDPROG
+    bool "Enable PyOCD Flash Programmer"
+    depends on FLASH
+    depends on CRC
+
+if PYOCDPROG
+
+config PYOCDPROG_BUFFER_SIZE
+    int "Buffer size for pyocdprog"
+    default 256
+
+config PYOCDPROG_BUFFER_COUNT
+    int "Number of buffers for pyocdprog"
+    default 2
+
+config PYOCDPROG_POLLING_INTERVAL_MS
+    int "Polling interval for pyocdprog"
+    default 10
+
+module = PYOCDPROG
+module-str = PyOCD Flash Programmer
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # PYOCDPROG

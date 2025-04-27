@@ -1,4 +1,7 @@
 # Copyright (c) 2024 Tenstorrent AI ULC
 # SPDX-License-Identifier: Apache-2.0
 
+# zephyr-keep-sorted-start
+rsource "pyocdprog/Kconfig"
 rsource "tenstorrent/Kconfig"
+# zephyr-keep-sorted-stop
