@@ -24,4 +24,7 @@ module = PYOCDPROG
 module-str = PyOCD Flash Programmer
 source "subsys/logging/Kconfig.template.log_config"
 
+config PYOCDPROG_MAIN
+    bool "Provide a simple main applicaiton for PyOCD Flash Programmer"
+
 endif # PYOCDPROG
