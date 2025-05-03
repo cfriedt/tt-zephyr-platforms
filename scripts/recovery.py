@@ -30,7 +30,6 @@ def get_mcu_params(elf_path: Path, bin_path: Path = None):
     Get the MCU parameters for the specified MCU.
     """
     global mcu_param_cache
-    thumb_bit = 1  # lsb used to indicate a thumb function
 
     if mcu_param_cache and str(elf_path) in mcu_param_cache:
         return mcu_param_cache[str(elf_path)]
@@ -55,20 +54,24 @@ def get_mcu_params(elf_path: Path, bin_path: Path = None):
             insns.append(blah[0])
 
     mcu_param = {
+        "load_address": symtab["CONFIG_SRAM_BASE_ADDRESS"],
+        # "load_address": symtab["z_arm_reset"],
         "sram_start": symtab["CONFIG_SRAM_BASE_ADDRESS"],
         "sram_size": symtab["CONFIG_SRAM_SIZE"] * 1024,
-        "sram_page_size": 0x1000,  # 4 KiB
         "instructions": insns,
-        # offsets from start of SRAM (these could also be derived from a linked elf if we compiled from source)
-        # "pc_init": symtab["pyocdprog_op_init"] + thumb_bit,
-        "pc_init": symtab["z_arm_reset"],
+        "begin_stack": symtab["z_main_stack"] + symtab["CONFIG_MAIN_STACK_SIZE"],
+        # "begin_stack": symtab["CONFIG_SRAM_BASE_ADDRESS"] + symtab["CONFIG_SRAM_SIZE"] * 1024,
+        "pc_init": symtab["pyocdprog_op_init"],
+        # "pc_init": symtab["z_arm_reset"],
         "pc_unInit": symtab["pyocdprog_op_uninit"],
         "pc_program_page": symtab["pyocdprog_op_program_page"],
         "pc_erase_sector": symtab["pyocdprog_op_erase_sector"],
         "pc_eraseAll": symtab["pyocdprog_op_erase_all"],
-        "begin_data": 0,  # what is this??
+        "begin_data": symtab["pyocdprog_data"],  # what is this??
         "page_buffers": [symtab["pyocdprog_buffer"] + x * symtab["CONFIG_PYOCDPROG_BUFFER_SIZE"] for x in range(0, symtab["CONFIG_PYOCDPROG_BUFFER_COUNT"])],
-        "static_base": 0x7D0,
+        # "static_base": symtab["pyocdprog_static_base"],
+        "static_base": 0,
+        "while_loop": symtab["pyocdprog_while_loop"],
     }
 
     mcu_param_cache[str(elf_path)] = mcu_param
@@ -128,7 +131,7 @@ def get_spi_flash_algorithm(mcu: str, flash: str, elf: Path):
     sram_page = sram_pages(mcu, flash, elf)
 
     return {
-        "load_address": mcu_params["sram_start"],
+        "load_address": mcu_params["load_address"],
         "instructions": mcu_params["instructions"],
         "pc_init": mcu_params["pc_init"],
         "pc_unInit": mcu_params["pc_unInit"],
@@ -136,8 +139,8 @@ def get_spi_flash_algorithm(mcu: str, flash: str, elf: Path):
         "pc_erase_sector": mcu_params["pc_erase_sector"],
         "pc_eraseAll": mcu_params["pc_eraseAll"],
         "static_base": mcu_params["static_base"],
-        "begin_stack": mcu_params["sram_start"] + mcu_params["sram_size"],
-        "begin_data": sram_page[2],
+        "begin_stack": mcu_params["begin_stack"],
+        "begin_data": mcu_params["begin_data"],
         "page_size": flash_page_size,
         "analyzer_supported": False,
         "analyzer_address": 0,  # sram_page[3],
@@ -197,6 +200,7 @@ class SpiLoader(MemoryLoader):
 
         self._map = session.board.target.memory_map
         self._flash = Flash(session.board.target, algo)
+        # self._flash.set_flash_algo_debug(True)
 
         for region in self._map:
             if region.type == MemoryType.FLASH:
@@ -254,7 +258,6 @@ def main():
                 addr = input_tuple["addr"]
                 data = input_tuple["data"]
                 programmer.add_data(addr, data)
-
             programmer.commit()
 
     except Exception as e:

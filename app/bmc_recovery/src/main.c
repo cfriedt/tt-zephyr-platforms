@@ -4,7 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <stdint.h>
+
 #include <pyocdprog/pyocdprog.h>
+#include <zephyr/kernel.h>
+#include <zephyr/sys/util.h>
 
 int main()
 {

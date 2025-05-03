@@ -5,9 +5,13 @@
  */
 
 /*
- * west build -p auto -b nucleo_l496zg samples/drivers/jesd216/
- * west flash -r openocd --cmd-pre-init "adapter serial 0671FF495177514867242707"
+ * west build -p auto -b nucleo_l496zg app/bmc_recovery
+ * west attach -r openocd --cmd-pre-init "adapter serial 0671FF495177514867242707"
  */
+
+&wwdg {
+        status = "disabled";
+};
 
 &spi1 {
         pinctrl-0 = <&spi1_nss_pb0 &spi1_sck_pa5

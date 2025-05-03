@@ -23,12 +23,6 @@
 
 LOG_MODULE_REGISTER(pyocdprog, CONFIG_PYOCDPROG_LOG_LEVEL);
 
-static const struct device *const flashdev = DEVICE_DT_GET_OR_NULL(DT_NODELABEL(flash1));
-
-volatile enum pyocdprog_op pyocdprog_op;
-volatile struct pyocdprog_args pyocdprog_args;
-volatile int pyocdprog_result;
-
 BUILD_ASSERT(CONFIG_PYOCDPROG_BUFFER_SIZE % sizeof(uint32_t) == 0,
 	     "Invalid selection for CONFIG_PYOCDPROG_BUFFER_SIZE");
 BUILD_ASSERT(CONFIG_PYOCDPROG_BUFFER_SIZE >= sizeof(uint32_t),
@@ -36,20 +30,29 @@ BUILD_ASSERT(CONFIG_PYOCDPROG_BUFFER_SIZE >= sizeof(uint32_t),
 BUILD_ASSERT(CONFIG_PYOCDPROG_BUFFER_COUNT >= 1,
 	     "Invalid selection for CONFIG_PYOCDPROG_BUFFER_COUNT");
 
-uint32_t __used pyocdprog_data[CONFIG_PYOCDPROG_BUFFER_COUNT];
-uint8_t __used __aligned(256) pyocdprog_buffer[CONFIG_PYOCDPROG_BUFFER_COUNT]
-					      [CONFIG_PYOCDPROG_BUFFER_SIZE];
+static const struct device *const flashdev = DEVICE_DT_GET_OR_NULL(DT_NODELABEL(flash1));
+
+volatile enum pyocdprog_op pyocdprog_op;
+volatile struct pyocdprog_args pyocdprog_args;
+volatile int pyocdprog_result;
+volatile uint32_t __used pyocdprog_static_base;
+volatile uint32_t __used pyocdprog_data[CONFIG_PYOCDPROG_BUFFER_COUNT];
+volatile uint8_t __used __aligned(256) pyocdprog_buffer[CONFIG_PYOCDPROG_BUFFER_COUNT]
+						       [CONFIG_PYOCDPROG_BUFFER_SIZE];
+
+__used void pyocdprog_while_loop(void)
+{
+	while (true) {
+		__asm__ __volatile__("" : : : "memory");
+	}
+}
 
 int pyocdprog_op_init(uintptr_t address, uintptr_t clock, enum pyocdprog_initop value)
 {
-	/*
-	 * TODO: possibly fill in this function to
-	 * Set pinmux to SPI mode.
-	 * Initialize the SPI controller
-	 */
-
-	LOG_DBG("init: address: 0x%lx, clock: %lu, value: %s", address, clock,
-		pyocdprog_initop_to_string(value));
+	volatile uint32_t *iwdg = (volatile uint32_t *)0x40003000;
+	iwdg[0] = 0x5555;
+	iwdg[1] = 0x06;
+	iwdg[2] = 4095;
 
 	return 0;
 }
@@ -69,15 +72,19 @@ int pyocdprog_op_uninit(enum pyocdprog_initop value)
 
 uint32_t pyocdprog_op_compute_crc(uintptr_t begin_data, uintptr_t len)
 {
-	if ((begin_data < (uintptr_t)(void *)pyocdprog_buffer) ||
-	    (begin_data >= (uintptr_t)pyocdprog_buffer + sizeof(pyocdprog_buffer))) {
+	uint32_t result;
+
+	if (!PART_OF_ARRAY(pyocdprog_buffer, begin_data)) {
 		LOG_DBG("invalid address for data: 0x%lx", begin_data);
 		return -EINVAL;
 	}
 
 	LOG_DBG("crc: begin_data: 0x%lx, len: %lu", begin_data, len);
 
-	return crc32_ieee((uint8_t *)begin_data, len);
+	result = crc32_ieee((uint8_t *)begin_data, len);
+	pyocdprog_data[ARRAY_INDEX_FLOOR(pyocdprog_buffer, begin_data)] = result;
+
+	return result;
 }
 
 int pyocdprog_op_program_page(uintptr_t address, uintptr_t len, uintptr_t begin_data)
