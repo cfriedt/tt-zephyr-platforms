@@ -39,51 +39,7 @@ static const struct gpio_dt_spec board_fault_led =
 
 void event_dispatch(uint32_t events);
 void process_cm2bm_message(struct bh_chip *chip);
-
-int update_fw(void)
-{
-	/* To get here we are already running known good fw */
-	int ret;
-
-	const struct gpio_dt_spec reset_spi = BH_CHIPS[BH_CHIP_PRIMARY_INDEX].config.spi_reset;
-
-	ret = gpio_pin_configure_dt(&reset_spi, GPIO_OUTPUT_ACTIVE);
-	if (ret < 0) {
-		LOG_ERR("%s() failed : %d", "gpio_pin_configure_dt", ret);
-		return 0;
-	}
-
-	gpio_pin_set_dt(&reset_spi, 1);
-	k_busy_wait(1000);
-	gpio_pin_set_dt(&reset_spi, 0);
-
-	if (IS_ENABLED(CONFIG_TT_FWUPDATE)) {
-		/* Check for and apply a new update, if one exists (we disable reboot here) */
-		ret = tt_fwupdate("bmfw", false, false);
-		if (ret < 0) {
-			LOG_ERR("%s() failed: %d", "tt_fwupdate", ret);
-			/*
-			 * This might be as simple as no update being found, but it could be due to
-			 * something else - e.g. I/O error, failure to read from external spi,
-			 * failure to write to internal flash, image corruption / crc failure, etc.
-			 */
-			return 0;
-		}
-
-		if (ret == 0) {
-			LOG_DBG("No firmware update required");
-		} else {
-			LOG_INF("Reboot needed in order to apply bmfw update");
-			if (IS_ENABLED(CONFIG_REBOOT)) {
-				sys_reboot(SYS_REBOOT_COLD);
-			}
-		}
-	} else {
-		ret = 0;
-	}
-
-	return ret;
-}
+int update_fw(void);
 
 void ina228_current_update(void)
 {
@@ -134,6 +90,7 @@ int main(void)
 		}
 	}
 
+	/* FIXME: write a zephyr driver for this */
 	if (IS_ENABLED(CONFIG_TT_FAN_CTRL)) {
 		ret = init_fan();
 		set_fan_speed(100); /* Set fan speed to 100 by default */
@@ -143,6 +100,7 @@ int main(void)
 		}
 	}
 
+	/* FIXME: write a zephyr driver for bh_chip */
 	ARRAY_FOR_EACH_PTR(BH_CHIPS, chip) {
 		ret = therm_trip_gpio_setup(chip);
 		if (ret != 0) {
@@ -151,35 +109,9 @@ int main(void)
 		}
 	}
 
-	if (IS_ENABLED(CONFIG_TT_FWUPDATE)) {
-		if (!tt_fwupdate_is_confirmed()) {
-			if (bist_rc < 0) {
-				LOG_ERR("Firmware update was unsuccessful and will be rolled-back "
-					"after bmfw reboot.");
-				if (IS_ENABLED(CONFIG_REBOOT)) {
-					sys_reboot(SYS_REBOOT_COLD);
-				}
-				return EXIT_FAILURE;
-			}
-
-			ret = tt_fwupdate_confirm();
-			if (ret < 0) {
-				LOG_ERR("%s() failed: %d", "tt_fwupdate_confirm", ret);
-				return EXIT_FAILURE;
-			}
-		}
-	}
-
 	ret = update_fw();
 	if (ret != 0) {
 		return ret;
-	}
-
-	if (IS_ENABLED(CONFIG_TT_FWUPDATE)) {
-		ret = tt_fwupdate_complete();
-		if (ret != 0) {
-			return ret;
-		}
 	}
 
 	/* Force all spi_muxes back to arc control */
