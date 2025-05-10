@@ -42,19 +42,7 @@ struct bh_chip_data {
 	/* Flag set when bootrom has been loaded and the arc_soft_reset sequence can be appled. */
 	bool workaround_applied;
 
-	/*
-	 * Flag set when need to send or receive 1 time info to chip.
-	 * Could be used for static data or config of peripherals.
-	 */
-	bool arc_just_reset;
-
 	unsigned int bus_cancel_flag;
-
-	/* notify the main thread to apply reset sequence */
-	bool trigger_reset;
-
-	/* notify the main thread to handle therm trip */
-	bool therm_trip_triggered;
 };
 
 struct bh_chip {

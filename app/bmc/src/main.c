@@ -15,7 +15,6 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/sensor.h>
-#include <zephyr/drivers/smbus.h>
 #include <zephyr/kernel.h>
 #include <zephyr/init.h>
 #include <zephyr/logging/log.h>
@@ -37,7 +36,9 @@ struct bh_chip BH_CHIPS[BH_CHIP_COUNT] = {DT_FOREACH_PROP_ELEM(DT_PATH(chips), c
 
 static const struct gpio_dt_spec board_fault_led =
 	GPIO_DT_SPEC_GET_OR(DT_PATH(board_fault_led), gpios, {0});
-static const struct device *const ina228 = DEVICE_DT_GET_OR_NULL(DT_NODELABEL(ina228));
+
+void event_dispatch(uint32_t events);
+void process_cm2bm_message(struct bh_chip *chip);
 
 int update_fw(void)
 {
@@ -48,8 +49,7 @@ int update_fw(void)
 
 	ret = gpio_pin_configure_dt(&reset_spi, GPIO_OUTPUT_ACTIVE);
 	if (ret < 0) {
-		LOG_ERR("%s() failed (could not configure the spi_reset pin): %d",
-			"gpio_pin_configure_dt", ret);
+		LOG_ERR("%s() failed : %d", "gpio_pin_configure_dt", ret);
 		return 0;
 	}
 
@@ -85,44 +85,10 @@ int update_fw(void)
 	return ret;
 }
 
-void process_cm2bm_message(struct bh_chip *chip)
-{
-	cm2bmMessageRet msg = bh_chip_get_cm2bm_message(chip);
-
-	if (msg.ret == 0) {
-		cm2bmMessage message = msg.msg;
-
-		switch (message.msg_id) {
-		case 0x1:
-			switch (message.data) {
-			case 0x0:
-				jtag_bootrom_reset_sequence(chip, true);
-				break;
-			case 0x3:
-				/* Trigger reboot; will reset asic and reload bmfw
-				 */
-				if (IS_ENABLED(CONFIG_REBOOT)) {
-					sys_reboot(SYS_REBOOT_COLD);
-				}
-				break;
-			}
-			break;
-		case 0x2:
-			/* Respond to ping request from CMFW */
-			bharc_smbus_word_data_write(&chip->config.arc, 0x21, 0xA5A5);
-			break;
-		case 0x3:
-			if (IS_ENABLED(CONFIG_TT_FAN_CTRL)) {
-				set_fan_speed((uint8_t)message.data & 0xFF);
-			}
-			break;
-		}
-	}
-}
-
 void ina228_current_update(void)
 {
 	struct sensor_value current_sensor_val;
+	const struct device *const ina228 = DEVICE_DT_GET_OR_NULL(DT_NODELABEL(ina228));
 
 	sensor_sample_fetch_chan(ina228, SENSOR_CHAN_CURRENT);
 	sensor_channel_get(ina228, SENSOR_CHAN_CURRENT, &current_sensor_val);
@@ -133,54 +99,6 @@ void ina228_current_update(void)
 	ARRAY_FOR_EACH_PTR(BH_CHIPS, chip) {
 		bh_chip_set_input_current(chip, &current);
 	}
-}
-
-uint16_t detect_max_pwr(void)
-{
-	static const struct gpio_dt_spec psu_sense0 =
-		GPIO_DT_SPEC_GET_OR(DT_PATH(psu_sense0), gpios, {0});
-	static const struct gpio_dt_spec psu_sense1 =
-		GPIO_DT_SPEC_GET_OR(DT_PATH(psu_sense1), gpios, {0});
-	static const struct gpio_dt_spec board_id0 =
-		GPIO_DT_SPEC_GET_OR(DT_PATH(board_id0), gpios, {0});
-
-	gpio_pin_configure_dt(&psu_sense0, GPIO_INPUT);
-	gpio_pin_configure_dt(&psu_sense1, GPIO_INPUT);
-	gpio_pin_configure_dt(&board_id0, GPIO_INPUT);
-
-	int sense0_val = gpio_pin_get_dt(&psu_sense0);
-	int sense1_val = gpio_pin_get_dt(&psu_sense1);
-	int board_id0_val = gpio_pin_get_dt(&board_id0);
-
-	uint16_t board_pwr;
-	uint16_t psu_pwr;
-
-	if (board_id0_val) {
-		board_pwr = 450;
-	} else {
-		board_pwr = 300;
-	}
-
-	if (!sense0_val && !sense1_val) {
-		psu_pwr = 600;
-	} else if (sense0_val && !sense1_val) {
-		psu_pwr = 450;
-	} else if (!sense0_val && sense1_val) {
-		psu_pwr = 300;
-	} else {
-		/* Pins could either be open or shorted together */
-		/* Pull down one and check the other */
-		gpio_pin_configure_dt(&psu_sense0, GPIO_OUTPUT_LOW);
-		if (!gpio_pin_get_dt(&psu_sense1)) {
-			/* If shorted together then max power is 150W */
-			psu_pwr = 150;
-		} else {
-			psu_pwr = 0;
-		}
-		gpio_pin_configure_dt(&psu_sense0, GPIO_INPUT);
-	}
-
-	return MIN(board_pwr, psu_pwr);
 }
 
 int main(void)
@@ -303,77 +221,31 @@ int main(void)
 	bmStaticInfo static_info =
 		(bmStaticInfo){.version = 1, .bl_version = 0, .app_version = APPVERSION};
 
-	uint16_t max_pwr = detect_max_pwr();
-
 	while (true) {
-		uint32_t events = tt_event_wait(TT_EVENT_MASK, K_MSEC(20));
+		event_dispatch(bm_event_wait(BM_EVENT_MASK, K_MSEC(20)));
 
-		/* handler for therm trip */
-		ARRAY_FOR_EACH_PTR(BH_CHIPS, chip) {
-			if (chip->data.therm_trip_triggered) {
-				chip->data.therm_trip_triggered = false;
-
-				if (board_fault_led.port != NULL) {
-					gpio_pin_set_dt(&board_fault_led, 1);
-				}
-
-				if (IS_ENABLED(CONFIG_TT_FAN_CTRL)) {
-					set_fan_speed(100);
-				}
-				bh_chip_reset_chip(chip, true);
-				bh_chip_cancel_bus_transfer_clear(chip);
-			}
-		}
-
-		/* handler for PERST */
-		ARRAY_FOR_EACH_PTR(BH_CHIPS, chip) {
-			if (chip->data.trigger_reset) {
-				chip->data.trigger_reset = false;
-				if (chip->data.workaround_applied) {
-					jtag_bootrom_reset_asic(chip);
-					jtag_bootrom_soft_reset_arc(chip);
-					jtag_bootrom_teardown(chip);
-					chip->data.needs_reset = false;
-				} else {
-					chip->data.needs_reset = true;
-				}
-				bh_chip_cancel_bus_transfer_clear(chip);
-			}
-		}
-
-		/* TODO(drosen): Turn this into a task which will re-arm until static data is sent
+		/*
+		 * FIXME: create a workqueue or sensor thread to sample all sensors
+		 * (note: this is possible even with non-uniform sample rates).
 		 */
-		ARRAY_FOR_EACH_PTR(BH_CHIPS, chip) {
-			if (chip->data.arc_just_reset) {
-				if (bh_chip_set_static_info(chip, &static_info) == 0) {
-					chip->data.arc_just_reset = false;
-				}
-				bh_chip_set_board_pwr_lim(chip, max_pwr);
-			}
-		}
-
 		if (IS_ENABLED(CONFIG_INA228)) {
 			ina228_current_update();
 		}
 
+		/* FIXME: create mfd driver for fan controller and sample from sensor thread */
 		if (IS_ENABLED(CONFIG_TT_FAN_CTRL)) {
 			uint16_t rpm = get_fan_rpm();
 
+			/* FIXME: periodically trigger this as an event */
 			ARRAY_FOR_EACH_PTR(BH_CHIPS, chip) {
 				bh_chip_set_fan_rpm(chip, rpm);
 			}
 		}
 
+		/* FIXME: periodically trigger this as an event */
 		ARRAY_FOR_EACH_PTR(BH_CHIPS, chip) {
 			process_cm2bm_message(chip);
 		}
-
-		/*
-		 * Really only matters if running without security... but
-		 * cm should register that it is on the pcie bus and therefore can be an update
-		 * candidate. If chips that are on the bus see that an update has been requested
-		 * they can update?
-		 */
 	}
 
 	return EXIT_SUCCESS;
