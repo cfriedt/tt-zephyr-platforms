@@ -120,6 +120,11 @@
 		interrupt-parent = <&intc>;
 	};
 
+	fwtable: fwtable {
+		compatible = "tenstorrent,bh-fwtable";
+		status = "disabled";
+	};
+
 	soc {
 		#address-cells = <1>;
 		#size-cells = <1>;
