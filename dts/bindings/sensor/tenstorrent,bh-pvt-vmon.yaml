@@ -9,8 +9,7 @@ description: |
     
     bh_pvt0: bh_pvt@0x80080000 {
       compatible = "tenstorrent,bh-pvt";
-      reg = <0x80080000 0x40>, <0x80080040 0x40>, <0x80080800 0x200>;
-      reg-names = "pvt", "irq", "vm_cmn";
+      reg = <0x80080000 0x1980>;
       interrupts = <56 1>;
       interrupt-parent = <&intc>;
 
@@ -36,3 +35,9 @@ properties:
     required: true
     description: |
       Instance number of sensor.
+
+  sample-period-ms:
+    type: int
+    default: 5
+    description: |
+      Temperature sample period in milliseconds.

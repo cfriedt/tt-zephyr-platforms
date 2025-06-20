@@ -10,8 +10,7 @@ description: |
     E.g.
     bh_pvt0: bh_pvt@0x80080000 {
       compatible = "tenstorrent,bh-pvt";
-      reg = <0x80080000 0x40>, <0x80080040 0x40>, <0x80080080 0x40>;
-      reg-names = "pvt", "irq", "ts_cmn";
+      reg = <0x80080000 0x1980>;
       interrupts = <56 1>;
       interrupt-parent = <&intc>;
 
