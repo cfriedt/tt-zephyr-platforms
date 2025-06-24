@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT tenstorrent_bh_ddr_memc
+#define DT_DRV_COMPAT tenstorrent_bh_memc
 
 #include "arc_dma.h"
 #include "harvesting.h"
@@ -72,7 +72,7 @@
 #define MRISC_FW_TAG     "memfw"
 #define MRISC_FW_CFG_TAG "memfwcfg"
 
-struct memc_tt_bh_ddr_data {
+struct memc_tt_bh_data {
 };
 
 LOG_MODULE_REGISTER(memc_tt_bh, CONFIG_MEMC_LOG_LEVEL);
@@ -322,4 +322,4 @@ static int memc_tt_bh_init(const struct device *dev)
 			      &memc_tt_bh_data_##_inst, &memc_tt_bh_config_##_inst, POST_KERNEL,   \
 			      CONFIG_MEMC_TT_BH_INIT_PRIORITY, &_memc_tt_bh_api);
 
-DT_INST_FOREACH_STATUS_OKAY(DEFINE_MEMC_TT_BH_DDR)
+DT_INST_FOREACH_STATUS_OKAY(DEFINE_MEMC_TT_BH)
