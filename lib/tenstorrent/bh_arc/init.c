@@ -401,11 +401,6 @@ static int InitHW(void)
 	STATUS_BOOT_STATUS0_reg_u boot_status0 = {0};
 	STATUS_ERROR_STATUS0_reg_u error_status0 = {0};
 
-	if (!IS_ENABLED(CONFIG_TT_SMC_RECOVERY)) {
-		/* Initialize NOC so we can broadcast to all Tensixes */
-		NocInit();
-	}
-
 	SetPostCode(POST_CODE_SRC_CMFW, POST_CODE_ARC_INIT_STEP6);
 	if (!IS_ENABLED(CONFIG_TT_SMC_RECOVERY)) {
 		/* Assert Soft Reset for ERISC, MRISC Tensix (skip L2CPU due to bug) */
