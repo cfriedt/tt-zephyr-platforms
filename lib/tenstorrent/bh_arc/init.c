@@ -402,9 +402,6 @@ static int InitHW(void)
 	STATUS_ERROR_STATUS0_reg_u error_status0 = {0};
 
 	if (!IS_ENABLED(CONFIG_TT_SMC_RECOVERY)) {
-		/* Enable Process + Voltage + Thermal monitors */
-		PVTInit();
-
 		/* Initialize NOC so we can broadcast to all Tensixes */
 		NocInit();
 	}
