@@ -4,20 +4,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "avs.h"
+#include "dw_apb_i2c.h"
 #include "regulator.h"
+#include "status_reg.h"
+#include "timer.h"
 
 #include <math.h>  /* for ldexp */
 #include <float.h> /* for FLT_MAX */
 #include <stdint.h>
-#include <zephyr/kernel.h>
-#include <zephyr/logging/log.h>
+
 #include <tenstorrent/msg_type.h>
 #include <tenstorrent/msgqueue.h>
+#include <tenstorrent/post_code.h>
+#include <zephyr/init.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 #include <zephyr/drivers/misc/bh_fwtable.h>
-
-#include "avs.h"
-#include "dw_apb_i2c.h"
-#include "timer.h"
 
 LOG_MODULE_REGISTER(regulator);
 
@@ -75,6 +78,8 @@ typedef struct {
 	uint8_t turn_off_behaviour : 1;
 	uint8_t on_off_state : 1;
 } OperationBits;
+
+static const struct device *const fwtable_dev = DEVICE_DT_GET(DT_NODELABEL(fwtable));
 
 /* The default value is the regulator default */
 static uint8_t vout_cmd_source = VoutCommand;
@@ -225,12 +230,12 @@ void SwitchVoutControl(VoltageCmdSource source)
 	vout_cmd_source = source;
 }
 
-uint32_t RegulatorInit(PcbType board_type)
+static uint32_t RegulatorInit(PcbType board_type)
 {
-	/* Helpers used in this function */
-	#define REGULATOR_DATA(regulator, cmd) \
-		{0x##cmd, regulator##_##cmd##_data, regulator##_##cmd##_mask, \
-		sizeof(regulator##_##cmd##_data)}
+/* Helpers used in this function */
+#define REGULATOR_DATA(regulator, cmd)                                                             \
+	{0x##cmd, regulator##_##cmd##_data, regulator##_##cmd##_mask,                              \
+	 sizeof(regulator##_##cmd##_data)}
 
 	typedef struct {
 		uint8_t cmd;
@@ -427,6 +432,27 @@ uint32_t RegulatorInit(PcbType board_type)
 	}
 	return aggregate_i2c_errors;
 }
+
+static int regulator_init(void)
+{
+	int ret;
+	extern STATUS_ERROR_STATUS0_reg_u error_status0;
+
+	SetPostCode(POST_CODE_SRC_CMFW, POST_CODE_ARC_INIT_STEPC);
+
+	if (IS_ENABLED(CONFIG_TT_SMC_RECOVERY) || !IS_ENABLED(CONFIG_ARC)) {
+		return 0;
+	}
+
+	ret = (int)RegulatorInit(tt_bh_fwtable_get_pcb_type(fwtable_dev));
+	if (ret != 0) {
+		error_status0.f.regulator_init_error = 1;
+		return -EIO;
+	}
+
+	return 0;
+}
+SYS_INIT(regulator_init, APPLICATION, 16);
 
 static uint8_t set_voltage_handler(uint32_t msg_code, const struct request *request,
 				   struct response *response)

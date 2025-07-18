@@ -269,13 +269,7 @@ static int InitHW(void)
 	bool init_errors = false;
 
 	/* Initiate AVS interface and switch vout control to AVSBus */
-	SetPostCode(POST_CODE_SRC_CMFW, POST_CODE_ARC_INIT_STEPC);
 	if (!IS_ENABLED(CONFIG_TT_SMC_RECOVERY)) {
-		if (RegulatorInit(tt_bh_fwtable_get_pcb_type(fwtable_dev))) {
-			LOG_ERR("Failed to initialize regulators.\n");
-			error_status0.f.regulator_init_error = 1;
-			return -EIO;
-		}
 		AVSInit();
 		SwitchVoutControl(AVSVoutCommand);
 	}
