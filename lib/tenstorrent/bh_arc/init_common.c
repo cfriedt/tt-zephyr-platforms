@@ -25,11 +25,13 @@ int SpiReadWrap(uint32_t addr, uint32_t size, uint8_t *dst)
 	return TT_BOOT_FS_OK;
 }
 
-void InitSpiFS(void)
+static int InitSpiFS(void)
 {
 	EepromSetup();
 	tt_boot_fs_mount(&boot_fs_data, SpiReadWrap, NULL, NULL);
+	return 0;
 }
+SYS_INIT(InitSpiFS, APPLICATION, 2);
 
 void InitResetInterrupt(uint8_t pcie_inst)
 {
@@ -83,9 +85,5 @@ void DeassertTileResets(void)
 int InitFW(uint32_t app_version)
 {
 	WriteReg(STATUS_FW_VERSION_REG_ADDR, app_version);
-
-	/* Initialize SPI EEPROM and the filesystem */
-	InitSpiFS();
-
 	return 0;
 }
