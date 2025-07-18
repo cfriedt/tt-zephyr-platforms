@@ -4,24 +4,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "harvesting.h"
 #include "noc_init.h"
+#include "noc.h"
+#include "noc2axi.h"
+#include "reg.h"
+#include "telemetry.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include <zephyr/init.h>
-#include <zephyr/kernel.h>
-#include <zephyr/drivers/misc/bh_fwtable.h>
-#include <zephyr/sys/util.h>
-
 #include <tenstorrent/msgqueue.h>
 #include <tenstorrent/msg_type.h>
-#include "noc.h"
-#include "noc2axi.h"
-#include "reg.h"
-#include "harvesting.h"
-#include "telemetry.h"
+#include <zephyr/drivers/misc/bh_fwtable.h>
+#include <zephyr/init.h>
+#include <zephyr/kernel.h>
+#include <zephyr/sys/util.h>
 
 /* NIU config register indices for Read/WriteNocCfgReg */
 #define NIU_CFG_0                    0x0
@@ -558,6 +557,10 @@ void InitNocTranslation(unsigned int pcie_instance, uint16_t bad_tensix_cols, ui
 
 int InitNocTranslationFromHarvesting(void)
 {
+	if (IS_ENABLED(CONFIG_TT_SMC_RECOVERY) || !IS_ENABLED(CONFIG_ARC)) {
+		return 0;
+	}
+
 	/* Set up the EP as pcie instance (at 19-24). If there's no EP, it doesn't matter. */
 	unsigned int pcie_instance;
 
@@ -584,7 +587,10 @@ int InitNocTranslationFromHarvesting(void)
 	skip_eth |= 1 << (find_msb_set(~tile_enable.eth_enabled & GENMASK(9, 7)) - 1);
 
 	InitNocTranslation(pcie_instance, bad_tensix_cols, bad_gddr, skip_eth);
+
+	return 0;
 }
+SYS_INIT(InitNocTranslationFromHarvesting, APPLICATION, 19);
 
 static void DisableArcNocTranslation(void)
 {

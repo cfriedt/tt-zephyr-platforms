@@ -268,12 +268,6 @@ static int InitHW(void)
 	STATUS_ERROR_STATUS0_reg_u error_status0 = {0};
 	bool init_errors = false;
 
-	if (!IS_ENABLED(CONFIG_TT_SMC_RECOVERY)) {
-		if (tt_bh_fwtable_get_fw_table(fwtable_dev)->feature_enable.noc_translation_en) {
-			InitNocTranslationFromHarvesting();
-		}
-	}
-
 	SetPostCode(POST_CODE_SRC_CMFW, POST_CODE_ARC_INIT_STEPE);
 	/* Check GDDR training status. */
 	if (!IS_ENABLED(CONFIG_TT_SMC_RECOVERY)) {
