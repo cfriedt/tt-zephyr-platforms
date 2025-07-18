@@ -12,11 +12,14 @@
 
 #include <float.h> /* for FLT_MAX */
 
-#include <zephyr/init.h>
-#include <zephyr/kernel.h>
 #include <tenstorrent/msg_type.h>
 #include <tenstorrent/msgqueue.h>
 #include <tenstorrent/post_code.h>
+#include <zephyr/init.h>
+#include <zephyr/kernel.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/clock_control/clock_control_tt_bh.h>
+#include <zephyr/drivers/clock_control.h>
 
 #define SDIF_DONE_TIMEOUT_MS 10
 
@@ -244,6 +247,7 @@ typedef union {
 #define PVT_CNTL_TS_PD_SDIF_DATA_REG_DEFAULT (0x00000000)
 
 static uint32_t selected_pd_delay_chain;
+static const struct device *const pll_dev_1 = DEVICE_DT_GET(DT_NODELABEL(pll1));
 
 /* return TS temperature in C */
 static float DoutToTemp(uint16_t dout)
@@ -347,7 +351,11 @@ static inline void PVTInterruptConfig(void)
 /* target a PVT clock of 5 MHz */
 static inline void PVTClkConfig(void)
 {
-	uint32_t apb_clk = GetAPBCLK();
+	//uint32_t apb_clk = GetAPBCLK();
+	uint32_t apb_clk = 0;
+	clock_control_get_rate(pll_dev_1, (clock_control_subsys_t)CLOCK_CONTROL_TT_BH_CLOCK_APBCLK,
+	(clock_control_subsys_rate_t)apb_clk);
+
 	PVT_CNTL_CLK_SYNTH_reg_u clk_synt;
 
 	clk_synt.val = PVT_CNTL_CLK_SYNTH_REG_DEFAULT;

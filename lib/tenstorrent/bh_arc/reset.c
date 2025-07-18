@@ -24,6 +24,8 @@
 #include <tenstorrent/msg_type.h>
 #include <tenstorrent/post_code.h>
 #include <tenstorrent/tt_boot_fs.h>
+#include <zephyr/drivers/clock_control.h>
+#include <zephyr/drivers/clock_control/clock_control_tt_bh.h>
 #include <zephyr/drivers/misc/bh_fwtable.h>
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
@@ -36,6 +38,62 @@ LOG_MODULE_REGISTER(InitHW, CONFIG_TT_APP_LOG_LEVEL);
 static const struct device *const fwtable_dev = DEVICE_DT_GET(DT_NODELABEL(fwtable));
 uint8_t large_sram_buffer[SCRATCHPAD_SIZE] __aligned(4);
 STATUS_ERROR_STATUS0_reg_u error_status0;
+
+#define PLL_DEVICE_INIT(inst, compat, ...) DEVICE_DT_GET(DT_INST(inst, compat)),
+static const struct device *const pll_devs[] = {
+	DT_COMPAT_FOREACH_STATUS_OKAY_VARGS(tenstorrent_bh_clock_control, PLL_DEVICE_INIT)
+};
+//static uint32_t pll_rates[DT_NUM_INST_STATUS_OKAY(tenstorrent_bh_clock_control)];
+
+static int_least64_t pll_bypass_backup_rates(void)
+{
+	ARRAY_FOR_EACH(pll_devs, i) {
+		int ret;
+		const struct device *dev = pll_devs[i];
+#if 0
+		uint32_t *rate = &pll_rates[i];
+
+		ret = clock_control_get_rate(dev, NULL, rate);
+		if (ret < 0) {
+			LOG_ERR("%s() failed: %d", "clock_control_get_rate", i);
+			return ret;
+		}
+#endif
+		ret = clock_control_configure(dev, NULL,
+			(void *)CLOCK_CONTROL_TT_BH_CONFIG_BYPASS);
+		if (ret < 0) {
+			LOG_ERR("%s() failed: %d", "clock_control_configure", i);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+static int pll_unbypass_restore_rates(void)
+{
+	ARRAY_FOR_EACH(pll_devs, i) {
+		int ret;
+		const struct device *dev = pll_devs[i];
+//		uint32_t *rate = &pll_rates[i];
+
+		ret = clock_control_configure(dev, NULL,
+			(void *)CLOCK_CONTROL_TT_BH_CONFIG_UNBYPASS);
+		if (ret < 0) {
+			LOG_ERR("%s() failed: %d", "clock_control_configure", i);
+			return ret;
+		}
+#if 0
+		ret = clock_control_set_rate(dev, NULL, rate);
+		if (ret < 0) {
+			LOG_ERR("%s() failed: %d", "clock_control_set_rate", i);
+			return ret;
+		}
+#endif
+	}
+
+	return 0;
+}
 
 /* Assert soft reset for all RISC-V cores */
 /* L2CPU is skipped due to JIRA issues BH-25 and BH-28 */
@@ -100,8 +158,13 @@ static int DeassertRiscvResets(void)
 		return 0;
 	}
 
+	int ret;
+
 	/* Go back to PLL bypass, since RISCV resets need to be deasserted at low speed */
-	PLLAllBypass();
+	ret = pll_bypass_backup_rates();
+	if (ret < 0) {
+		return ret;
+	}
 
 	/* Deassert RISC reset from reset_unit */
 
@@ -121,9 +184,7 @@ static int DeassertRiscvResets(void)
 	ddr_reset.f.ddr_risc_reset_n = 0xffffff;
 	WriteReg(RESET_UNIT_DDR_RESET_REG_ADDR, ddr_reset.val);
 
-	PLLInit();
-
-	return 0;
+	return pll_unbypass_restore_rates();
 }
 SYS_INIT(DeassertRiscvResets, APPLICATION, 11);
 
@@ -184,8 +245,13 @@ static int DeassertTileResets(void)
 		return 0;
 	}
 
+	int ret;
+
 	/* Put all PLLs back into bypass, since tile resets need to be deasserted at low speed */
-	PLLAllBypass();
+	ret = pll_bypass_backup_rates();
+	if (ret < 0) {
+		return ret;
+	}
 
 	RESET_UNIT_GLOBAL_RESET_reg_u global_reset = {.val = RESET_UNIT_GLOBAL_RESET_REG_DEFAULT};
 
@@ -218,6 +284,6 @@ static int DeassertTileResets(void)
 	l2cpu_reset.f.l2cpu_reset_n = 0xf;
 	WriteReg(RESET_UNIT_L2CPU_RESET_REG_ADDR, l2cpu_reset.val);
 
-	return 0;
+	return pll_unbypass_restore_rates();
 }
 SYS_INIT(DeassertTileResets, APPLICATION, 6);
