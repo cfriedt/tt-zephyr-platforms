@@ -14,6 +14,7 @@
 #include <stdint.h>
 
 #include <tenstorrent/tt_boot_fs.h>
+#include <zephyr/init.h>
 #include <zephyr/kernel.h>
 
 int SpiReadWrap(uint32_t addr, uint32_t size, uint8_t *dst)
@@ -82,10 +83,6 @@ void DeassertTileResets(void)
 int InitFW(uint32_t app_version)
 {
 	WriteReg(STATUS_FW_VERSION_REG_ADDR, app_version);
-
-	/* Initialize ARC DMA */
-	ArcDmaConfig();
-	ArcDmaInitCh(0, 0, 15);
 
 	/* Initialize SPI EEPROM and the filesystem */
 	InitSpiFS();
