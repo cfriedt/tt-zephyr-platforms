@@ -1,0 +1,30 @@
+diff --git a/drivers/sensor/ti/CMakeLists.txt b/drivers/sensor/ti/CMakeLists.txt
+index fb1ea8dbe59..e5a10597255 100644
+--- a/drivers/sensor/ti/CMakeLists.txt
++++ b/drivers/sensor/ti/CMakeLists.txt
+@@ -5,7 +5,7 @@
+ add_subdirectory_ifdef(CONFIG_BQ274XX bq274xx)
+ add_subdirectory_ifdef(CONFIG_FDC2X1X fdc2x1x)
+ add_subdirectory_ifdef(CONFIG_INA219 ina219)
+-add_subdirectory_ifdef(CONFIG_INA2XX ina2xx)
++#add_subdirectory_ifdef(CONFIG_INA2XX ina2xx)
+ add_subdirectory_ifdef(CONFIG_INA3221 ina3221)
+ add_subdirectory_ifdef(CONFIG_INA7XX ina7xx)
+ add_subdirectory_ifdef(CONFIG_LM95234 lm95234)
+diff --git a/drivers/sensor/ti/Kconfig b/drivers/sensor/ti/Kconfig
+index f12900014db..2038be91b4c 100644
+--- a/drivers/sensor/ti/Kconfig
++++ b/drivers/sensor/ti/Kconfig
+@@ -5,7 +5,7 @@
+ source "drivers/sensor/ti/bq274xx/Kconfig"
+ source "drivers/sensor/ti/fdc2x1x/Kconfig"
+ source "drivers/sensor/ti/ina219/Kconfig"
+-source "drivers/sensor/ti/ina2xx/Kconfig"
++#source "drivers/sensor/ti/ina2xx/Kconfig"
+ source "drivers/sensor/ti/ina3221/Kconfig"
+ source "drivers/sensor/ti/ina7xx/Kconfig"
+ source "drivers/sensor/ti/lm95234/Kconfig"
+diff --git a/dts/bindings/sensor/ti,ina228.yaml b/dts/bindings/sensor/ti,ina228.yaml_ignore
+similarity index 100%
+rename from dts/bindings/sensor/ti,ina228.yaml
+rename to dts/bindings/sensor/ti,ina228.yaml_ignore
