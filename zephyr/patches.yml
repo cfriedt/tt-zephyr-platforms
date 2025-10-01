@@ -159,7 +159,7 @@ patches:
       Add an optional erase-block-size property to the jedec,spi-nor binding so that mcuboot
       does not complain about slot1_size not being defined.
   - path: zephyr/smbus-cancel.patch
-    sha256sum: 70a823aa801ce3e19aa1489eb1c5500387f1028d57ec977926f248066ce5f407
+    sha256sum: a496150f57da9cb464f46ef765e460dce6df0bad1947ffd93e4b0d05cce1984a
     module: zephyr
     author: Andrew Lewycky
     email: alewycky@tenstorrent.com

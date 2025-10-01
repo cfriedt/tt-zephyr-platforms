@@ -270,7 +270,7 @@ index 00e8d5767ef..84df00d5891 100644
  };
  
  /**
-@@ -1085,6 +1089,46 @@ static inline int z_impl_smbus_block_pcall(const struct device *dev,
+@@ -1085,6 +1089,56 @@ static inline int z_impl_smbus_block_pcall(const struct device *dev,
  				       rcv_count, rcv_buf);
  }
  
@@ -292,8 +292,13 @@ index 00e8d5767ef..84df00d5891 100644
 +
 +static inline int z_impl_smbus_cancel(const struct device *dev)
 +{
-+	(void)dev;
-+	return 0;
++	const struct smbus_driver_api *api = (const struct smbus_driver_api *)dev->api;
++
++	if (api->smbus_cancel == NULL) {
++		return -ENOSYS;
++	}
++
++	return api->smbus_cancel(dev);
 +}
 +
 +/**
@@ -310,8 +315,13 @@ index 00e8d5767ef..84df00d5891 100644
 +
 +static inline int z_impl_smbus_uncancel(const struct device *dev)
 +{
-+	(void)dev;
-+	return 0;
++	const struct smbus_driver_api *api = (const struct smbus_driver_api *)dev->api;
++
++	if (api->smbus_uncancel == NULL) {
++		return -ENOSYS;
++	}
++
++	return api->smbus_uncancel(dev);
 +}
 +
  #ifdef __cplusplus
