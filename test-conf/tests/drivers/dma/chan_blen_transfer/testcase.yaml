@@ -3,6 +3,7 @@ common:
     - drivers
     - dma
   depends_on: dma
+  timeout: 10
 tests:
   drivers.dma.chan_blen_transfer:
     min_ram: 16

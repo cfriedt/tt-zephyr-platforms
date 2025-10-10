@@ -73,7 +73,7 @@ if [[ "$TEST_SET" == *"dmc"* ]]; then
 	# Run the DMC tests
 	echo "Running DMC tests..."
 	# Run tests tagged with "smoke"
-	$ZEPHYR_BASE/scripts/twister -i \
+	$ZEPHYR_BASE/scripts/twister -c -i \
 		-p $DMC_BOARD --device-testing \
 		--west-flash \
 		--device-serial-pty $TT_Z_P_ROOT/scripts/dmc_rtt.py \
@@ -83,7 +83,7 @@ if [[ "$TEST_SET" == *"dmc"* ]]; then
 		--alt-config-root $TT_Z_P_ROOT/test-conf/tests \
 		-T $ZEPHYR_BASE/samples -T $ZEPHYR_BASE/tests -T $TT_Z_P_ROOT/tests \
 		-T $TT_Z_P_ROOT/samples \
-		--outdir $ZEPHYR_BASE/twister-dmc-smoke \
+		--outdir $TT_Z_P_ROOT/twister-dmc-smoke \
 		$@
 fi
 
@@ -92,18 +92,18 @@ if [[ "$TEST_SET" == *"smc"* ]]; then
 	echo "Running SMC tests..."
 	# Flash the DMFW app back onto the DMC. Otherwise the flash device
 	# will not be muxed to the SMC, and flash tests will fail
-	$ZEPHYR_BASE/scripts/twister -i \
+	$ZEPHYR_BASE/scripts/twister -c -i \
 		--tag e2e \
 		-p $DMC_BOARD --device-testing \
 		--device-serial-pty $TT_Z_P_ROOT/scripts/dmc_rtt.py \
 		--west-flash \
 		--flash-before \
 		-T $TT_Z_P_ROOT/app \
-		--outdir $ZEPHYR_BASE/twister-dmc-e2e \
+		--outdir $TT_Z_P_ROOT/twister-dmc-e2e \
 		$@
 
 	  # Run tests tagged with "smoke"
-	$ZEPHYR_BASE/scripts/twister -i \
+	$ZEPHYR_BASE/scripts/twister -c -i \
 		-p $SMC_BOARD --device-testing \
 		--device-serial-pty "$TT_Z_P_ROOT/scripts/smc_console.py -d $CONSOLE_DEV" \
 		--failure-script "$TT_Z_P_ROOT/scripts/smc_test_recovery.py --asic-id $ASIC_ID" \
@@ -114,6 +114,6 @@ if [[ "$TEST_SET" == *"smc"* ]]; then
 		--alt-config-root $TT_Z_P_ROOT/test-conf/tests \
 		-T $ZEPHYR_BASE/samples -T $ZEPHYR_BASE/tests \
 		-T $TT_Z_P_ROOT/tests -T $TT_Z_P_ROOT/samples \
-		--outdir $ZEPHYR_BASE/twister-smc-smoke \
+		--outdir $TT_Z_P_ROOT/twister-smc-smoke \
 		$@
 fi
