@@ -109,6 +109,8 @@ patches:
     date: 2025-07-24
     upstreamable: true
     merge-pr: https://github.com/zephyrproject-rtos/zephyr/pull/96691
+    merge-status: true
+    merge-date: 2025-10-13
     comments: |
       SMBus controller PEC for smbus_stm32
   - path: zephyr/scripts-pylib-pytest-twister-harness-ensure-serial.patch
