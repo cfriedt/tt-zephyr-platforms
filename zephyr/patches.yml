@@ -141,6 +141,8 @@ patches:
     author: James Growden
     email: jgrowden@tenstorrent.com
     date: 2025-08-19
+    upstreamable: true
+    merge-pr:
     comments: |
       Make zversion html take project/version settings from conf.py
   - path: zephyr/stm32-bwbr.patch
