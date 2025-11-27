@@ -65,6 +65,8 @@ jobs:
           name: ${{ steps.set_vars.outputs.RELEASE_NOTES }}
           path: ${{ env.RELEASE_NOTES_DIR }}/${{ steps.set_vars.outputs.RELEASE_NOTES }}
 
+  # FIXME: Please move this to build-fw.yml
+  # In this workflow, we should just download the pre-built, combined, recovery bundle and add it to the release.
   build-recovery-bundle:
     runs-on: ubuntu-24.04
     needs: prepare-release
@@ -108,8 +110,48 @@ jobs:
     secrets:
       SIGNATURE_KEY: ${{ secrets.SIGNATURE_KEY }}
 
+  build-debian-pkg:
+    needs: [build-release]
+    runs-on: ubuntu-24.04
+    steps:
+      - run: ${{ env.SET_VARS_CMDS }}
+      - uses: actions/checkout@v4
+      - run: apt-get update
+      - run: apt install -y dpkg-dev dpkg-sig gnupg
+
+      - name: Import GPG key
+        id: gpg_key_import
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.PKG_SIGNING_KEY_DEB }}
+
+      - run: gpg --list-keys
+      - run: gpg --list-secret-keys
+
+      - name: Download combined firmware bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: combined-fwbundle
+
+      - name: Build Debian Package
+        shell: bash
+        # FIXME: need a better way to get the correct GPG key (there may be more than 1 key available, and below just gets the first one)
+        run: |
+          DEBSIGN_KEY="$(for i in $(gpg --list-keys | grep -A 1 '^pub' | head -n2 | tail -n 1); do echo $i; done)"
+          ./scripts/build_deb.sh \
+            -b "fw_pack-${{ steps.set_vars.outputs.VERSION }}.fwbundle" \
+            -k "$DEBSIGN_KEY" \
+            -o . \
+            -v "${{ steps.set_vars.outputs.VERSION }}"
+
+      - name: Upload Debian Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-debian-pkg
+          path: "*.deb"
+
   publish-release:
-    needs: [build-release, prepare-release, build-recovery-bundle]
+    needs: [build-debian-pkg, build-release, prepare-release, build-recovery-bundle]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -137,6 +179,13 @@ jobs:
         with:
           name: tt-zephyr-platforms-${{ steps.set_vars.outputs.VERSION }}.spdx
 
+      - name: Download Debian Package
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware-debian-pkg
+
+      # FIXME: Please move this to build-fw.yml
+      # In this workflow, we should just download the pre-built, combined, recovery bundle and add it to the release.
       - name: Package firmware artifacts
         shell: bash
         run: |
@@ -171,5 +220,6 @@ jobs:
           files: |
             fw-pack-${{ github.ref_name }}-recovery.tar.gz
             *.fwbundle
+            *.deb
             tt-zephyr-platforms-${{ steps.set_vars.outputs.VERSION }}.zip
             tt-zephyr-platforms-${{ steps.set_vars.outputs.VERSION }}.spdx
