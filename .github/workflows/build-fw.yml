@@ -131,25 +131,6 @@ jobs:
             build-${{ matrix.board }}/**/zephyr.signed.hex
             build-${{ matrix.board }}/**/zephyr.stat
 
-  build-recovery:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          path: tt-zephyr-platforms
-      - uses: ./tt-zephyr-platforms/.github/workflows/prepare-zephyr
-        with:
-          app-path: tt-zephyr-platforms
-
-      - shell: bash
-        run: |
-          SIGNATURE_KEY_FILE="$(mktemp)"
-          echo "${{ secrets.SIGNATURE_KEY }}" | base64 -d > "$SIGNATURE_KEY_FILE"
-          SZ=$(wc -c "$SIGNATURE_KEY_FILE" | awk '{print $1}')
-          if [ $SZ -gt 42 ]; then
-            echo "SIGNATURE_KEY_FILE=$SIGNATURE_KEY_FILE" >> "$GITHUB_ENV"
-          fi
-
       - name: Build recovery firmware
         shell: bash
         run: |
@@ -195,45 +176,8 @@ jobs:
             build-recovery/**/zephyr.stat
             build-recovery/**/zephyr.signed.bin
 
-  build-assembly-test:
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        # FIXME: use board revisions from boards.json and filter those that support assembly tests
-        board:
-          - p150
-          - p300
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          path: tt-zephyr-platforms
-      - uses: ./tt-zephyr-platforms/.github/workflows/prepare-zephyr
-        with:
-          app-path: tt-zephyr-platforms
-
-      - name: Generate BOARD
-        # FIXME: use board revisions from boards.json and filter those that support assembly tests
-        shell: bash
-        run: |
-          case "${{ matrix.board }}" in
-            p150) BOARD=tt_blackhole@p150a/tt_blackhole/dmc;;
-            p300) BOARD=tt_blackhole@p300a/tt_blackhole/dmc;;
-
-            *) echo "Unknown board: ${{ matrix.board }}"; exit 1;;
-          esac
-          echo "BOARD=$BOARD" | tee "$GITHUB_ENV"
-
-      - shell: bash
-        run: |
-          SIGNATURE_KEY_FILE="$(mktemp)"
-          echo "${{ secrets.SIGNATURE_KEY }}" | base64 -d > "$SIGNATURE_KEY_FILE"
-          SZ=$(wc -c "$SIGNATURE_KEY_FILE" | awk '{print $1}')
-          if [ $SZ -gt 42 ]; then
-            echo "SIGNATURE_KEY_FILE=$SIGNATURE_KEY_FILE" >> "$GITHUB_ENV"
-          fi
-
       - name: Build assembly firmware
+        if: ${{ matrix.board == 'p150a' || matrix.board == 'p300a' }}
         shell: bash
         run: |
           if [ "$BOARD" = "" ]; then
@@ -254,33 +198,20 @@ jobs:
             --sysbuild \
             -S rtt-console \
             -p \
-            -b $BOARD \
+            -b tt_blackhole@${{ matrix.board }}/tt_blackhole/dmc \
             tt-zephyr-platforms/app/dmc \
             $EXTRA_ARGS
 
-      - name: Verify firmware signature
-        if: ${{ github.env.SIGNATURE_KEY_FILE != '' }}
+      - name: Verify assembly firmware signature
+        if: ${{ matrix.board == 'p150a' || matrix.board == 'p300a' }}
         shell: bash
         run: |
           # verify that built images for smc and dmc fw are signed
           # imgtool returns a non-zero exit code if the image is not signed
           imgtool verify --key "$SIGNATURE_KEY_FILE" build-assembly-test-${{ matrix.board }}/dmc/zephyr/zephyr.signed.bin
 
-      - name: Sanitize Ref Name
-        id: sanitize
-        run: |
-          REF_NAME="${{ github.ref_name }}"
-          SANITIZED=$(echo "$REF_NAME" | sed 's/[ /]/_/g')
-          echo "sanitized_ref_name=$SANITIZED" >> $GITHUB_OUTPUT
-
-      - name: Rename default to test expectations
-        shell: bash
-        run: |
-            mkdir assembly-test-preflash
-            cp build-assembly-test-${{ matrix.board }}/mcuboot/zephyr/zephyr.elf assembly-test-preflash/${{ matrix.board }}-bootloader-${{ steps.sanitize.outputs.sanitized_ref_name }}.elf
-            cp build-assembly-test-${{ matrix.board }}/dmc/zephyr/zephyr.signed.hex assembly-test-preflash/${{ matrix.board }}-app-${{ steps.sanitize.outputs.sanitized_ref_name }}.signed.hex
-
-      - name: Upload firmware assets
+      - name: Upload assembly-fw assets
+        if: ${{ matrix.board == 'p150a' || matrix.board == 'p300a' }}
         uses: actions/upload-artifact@v4
         with:
           name: assembly-fw-${{ matrix.board }}
@@ -297,6 +228,7 @@ jobs:
             build-assembly-test-${{ matrix.board }}/dmc/zephyr/zephyr.stat
 
       - name: Upload mcuboot assets
+        if: ${{ matrix.board == 'p150a' || matrix.board == 'p300a' }}
         uses: actions/upload-artifact@v4
         with:
           name: assembly-mcuboot-${{ matrix.board }}
@@ -308,15 +240,24 @@ jobs:
             build-assembly-test-${{ matrix.board }}/mcuboot/zephyr/zephyr.elf
             build-assembly-test-${{ matrix.board }}/mcuboot/zephyr/zephyr.hex
             build-assembly-test-${{ matrix.board }}/mcuboot/zephyr/zephyr.map
-            build-assembly-test-${{ matrix.board }}/mcuboot/zephyr/zephyr.signed.bin
-            build-assembly-test-${{ matrix.board }}/mcuboot/zephyr/zephyr.signed.hex
             build-assembly-test-${{ matrix.board }}/mcuboot/zephyr/zephyr.stat
 
-      - name: Upload test collateral
+      - name: Build Recovery Bundle
+        shell: bash
+        if: ${{ matrix.board != 'galaxy' }}
+        run: |
+          python3 tt-zephyr-platforms/scripts/tooling/blackhole_recovery/prepare-recovery-bundle.py \
+            --board ${{ matrix.board }} \
+            --signing-key "$SIGNATURE_KEY_FILE" \
+            fw-pack-${{ matrix.board }}-recovery.tar.gz
+
+      - name: Upload Recovery Assets
+        if: ${{ matrix.board != 'galaxy' }}
         uses: actions/upload-artifact@v4
         with:
-          name: assembly-test-${{ matrix.board }}-${{ steps.sanitize.outputs.sanitized_ref_name }}
-          path: assembly-test-preflash/**
+          name: firmware-recovery-${{ matrix.board }}
+          path: |
+            fw-pack-${{ matrix.board }}-recovery.tar.gz
 
   build-preflash:
     runs-on: ubuntu-24.04
@@ -380,6 +321,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: tt-zephyr-platforms
+      # is it really necessary to prepare a full zephyr build to build the flm?
       - uses: ./tt-zephyr-platforms/.github/workflows/prepare-zephyr
         with:
           app-path: tt-zephyr-platforms
@@ -388,3 +330,38 @@ jobs:
         shell: bash
         run: |
           ./build-flm.sh
+
+  build-combined-recovery:
+    runs-on: ubuntu-24.04
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download recovery artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: firmware-recovery-*
+
+      - name: Build Combined Recovery Bundle
+        shell: bash
+        run: |
+          BOARDS="$(jq -r -c ".[]" .github/boards.json)"
+          BOARDS="${BOARDS//$'\n'/ }" # Remove embedded newlines
+
+          find . -name '*.tar.gz' -ls
+
+          # Combine recovery bundles
+          mkdir firmware-recovery
+          for REV in ${BOARD_REVS[@]}; do
+            if [[ "$REV" == "galaxy" ]]; then
+              continue
+            fi
+            tar xf firmware-recovery-$REV/fw-pack-$REV-recovery.tar.gz -C firmware-recovery
+          done
+          tar zcf fw-pack-recovery.tar.gz -C firmware-recovery .
+
+      - name: Upload Combined Recovery Bundle Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-recovery
+          path: |
+            fw-pack-recovery.tar.gz
