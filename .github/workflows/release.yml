@@ -131,6 +131,11 @@ jobs:
         with:
           name: combined-fwbundle
 
+      - name: Download combined recovery bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: combined-recovery
+
       - name: Download Release Notes
         if: ${{ steps.set_vars.outputs.RELEASE_NOTES }}
         uses: actions/download-artifact@v4
