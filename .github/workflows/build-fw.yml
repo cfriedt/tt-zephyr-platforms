@@ -260,28 +260,27 @@ jobs:
           path: |
             fw-pack-${{ matrix.board }}-recovery.tar.gz
 
-  build-preflash:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          path: tt-zephyr-platforms
-      - uses: hendrikmuhs/ccache-action@v1.2.14
-      - uses: ./tt-zephyr-platforms/.github/workflows/prepare-zephyr
-        with:
-          app-path: tt-zephyr-platforms
-
       - name: Build preflash firmware
+        if: ${{ matrix.board == 'p100a' }}
         shell: bash
         run: |
-          ./tt-zephyr-platforms/scripts/build-preflash.sh
+          # reuse the output of the previous "Build firmware bundle" step
+          TTZP="$PWD/tt-zephyr-platforms"
+          YAML_PATH="$TTZP/boards/tenstorrent/tt_blackhole/bootfs/preflash-bootfs.yaml"
+          "$TTZP/scripts/tt_boot_fs.py" \
+            mkfs \
+            "$YAML_PATH" \
+            preflash.ihex \
+            --build-dir "build-${{ matrix.board }}" \
+            --hex
 
       - name: Upload preflash
         uses: actions/upload-artifact@v4
+        if: ${{ matrix.board == 'p100a' }}
         with:
           name: preflash-fw
           path: |
-            preflash*.ihex
+            preflash.ihex
 
   build-combined-fwbundle:
     runs-on: ubuntu-24.04
