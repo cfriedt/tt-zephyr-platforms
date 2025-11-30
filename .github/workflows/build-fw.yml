@@ -243,6 +243,15 @@ jobs:
             build-assembly-test-${{ matrix.board }}/mcuboot/zephyr/zephyr.map
             build-assembly-test-${{ matrix.board }}/mcuboot/zephyr/zephyr.stat
 
+      - name: Build Flash Loader Module
+        if: ${{ matrix.board == 'p100a' }}
+        working-directory: ./tt-zephyr-platforms/scripts/tooling/blackhole_recovery/data/bh_flm
+        shell: bash
+        run: |
+          ./build-flm.sh
+
+      # FIXME: this step duplicates a number of CI steps run above and should be refactored to
+      # reuse previously-built artifacts.
       - name: Build Recovery Bundle
         shell: bash
         if: ${{ matrix.board != 'galaxy' }}
@@ -314,23 +323,6 @@ jobs:
 
       - id: set_combined_fwbundle_output
         run: echo "combined_fwbundle_artifact=combined-fwbundle" >> $GITHUB_OUTPUT
-
-  build-bh-flm:
-    runs-on: ubuntu-24.04
-    name: Build Blackhole Flash Loader Module
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          path: tt-zephyr-platforms
-      - uses: hendrikmuhs/ccache-action@v1.2.14
-      - uses: ./tt-zephyr-platforms/.github/workflows/prepare-zephyr
-        with:
-          app-path: tt-zephyr-platforms
-      - name: Build Flash Loader Module
-        working-directory: ./tt-zephyr-platforms/scripts/tooling/blackhole_recovery/data/bh_flm
-        shell: bash
-        run: |
-          ./build-flm.sh
 
   build-combined-recovery:
     runs-on: ubuntu-24.04
